@@ -91,8 +91,11 @@ def handle_issue_summary(data):
         response_chunks = []
         for chunk in get_llm_response(prompt):
             response_chunks.append(chunk)
-            socketio.emit('stream', {'data': chunk}, room=session_id)
 
+        formatted_response = "".join(response_chunks)
+        formatted_response = formatted_response.replace("**", "<b>").replace("**", "</b>").replace("\n", "<br>")
+
+        socketio.emit('stream', {'data': formatted_response}, room=session_id)
         socketio.emit('done_loading', room=session_id)
 
 @app.route('/static/<path:filename>')

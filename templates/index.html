@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Talk to SWF Jira</title>
+    <title>Talk to  Jira</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
         body, html {
@@ -118,93 +118,87 @@
         #loading img {
             height: 50px;
         }
-    </style>
-</head>
-<body>
-    <div id="chat-container">
-        <div id="page-title">Talk to SWF Jira</div>
-        <div id="chat-header">
-            <span>No Datas are saved or used for training -></span>
-            <div id="issue-input-container">
-                <input type="text" id="issue-id-input" placeholder="Issue ID">
-                <button id="issue-submit-button">Submit</button>
+    
+        </style>
+    </head>
+    <body>
+        <div id="chat-container">
+            <div id="page-title">Talk to Jira</div>
+            <div id="chat-header">
+                <span>ASK  Jira</span>
+                <div id="issue-input-container">
+                    <input type="text" id="issue-id-input" placeholder="Issue ID">
+                    <button id="issue-submit-button">Submit</button>
+                </div>
+            </div>
+            <div id="messages"></div>
+            <div id="loading"><img src="{{ url_for('static', filename='loading.gif') }}" alt="Loading..."></div>
+            <div id="input-container">
+                <input type="text" id="message-input" />
+                <button id="send-button">Send</button>
             </div>
         </div>
-        <div id="messages"></div>
-        <div id="loading"><img src="{{ url_for('static', filename='loading.gif') }}" alt="Loading..."></div>
-        <div id="input-container">
-            <input type="text" id="message-input" />
-            <button id="send-button">Send</button>
-        </div>
-    </div>
-
-    <script>
-        const socket = io();
-        const messages = document.getElementById('messages');
-        const messageInput = document.getElementById('message-input');
-        const sendButton = document.getElementById('send-button');
-        const loading = document.getElementById('loading');
-        const sessionId = "{{ session_id }}";
-        const issueSubmitButton = document.getElementById('issue-submit-button');
-        const issueIdInput = document.getElementById('issue-id-input');
-
-        sendButton.addEventListener('click', sendMessage);
-
-        messageInput.addEventListener("keyup", function(event) {
-          if (event.keyCode === 13) {
-            event.preventDefault();
-            sendMessage();
-          }
-        });
-
-        function sendMessage() {
-            const message = messageInput.value;
-            if (message) {
-                messages.innerHTML += `<div class="message user-message">${message}</div>`;
-                socket.emit('message', { message: message });
-                messageInput.value = '';
+    
+        <script>
+            const socket = io();
+            const messages = document.getElementById('messages');
+            const messageInput = document.getElementById('message-input');
+            const sendButton = document.getElementById('send-button');
+            const loading = document.getElementById('loading');
+            const sessionId = "{{ session_id }}";
+            const issueSubmitButton = document.getElementById('issue-submit-button');
+            const issueIdInput = document.getElementById('issue-id-input');
+    
+            sendButton.addEventListener('click', sendMessage);
+    
+            messageInput.addEventListener("keyup", function(event) {
+              if (event.keyCode === 13) {
+                event.preventDefault();
+                sendMessage();
+              }
+            });
+    
+            function sendMessage() {
+                const message = messageInput.value;
+                if (message) {
+                    messages.innerHTML += `<div class="message user-message">${message}</div>`;
+                    socket.emit('message', { message: message });
+                    messageInput.value = '';
+                    messages.scrollTop = messages.scrollHeight;
+                }
+            }
+    
+            socket.on('stream', (data) => {
+                messages.innerHTML += data.data;
                 messages.scrollTop = messages.scrollHeight;
-            }
-        }
-
-        socket.on('stream', (data) => {
-            messages.innerHTML += data.data;
-            messages.scrollTop = messages.scrollHeight;
-        });
-
-        socket.on('loading', () => {
-            loading.style.display = 'block';
-        });
-
-        socket.on('done_loading', () => {
-             loading.style.display = 'none';
-        });
-
-        socket.on('connect', function() {
-            console.log('connected');
-        });
-
-        socket.on('clear_last_message', function(){
-            const botMessages = document.querySelectorAll('.bot-message');
-            if (botMessages.length > 0) {
-              botMessages[botMessages.length - 1].remove();
-            }
-        });
-
-        issueSubmitButton.addEventListener('click', () => {
-          const issueId = issueIdInput.value;
-          if (issueId) {
-            socket.emit('issue_summary', { issueId: issueId });
-            issueIdInput.value = '';
-          }
-        });
-
-        socket.on('issue_summary_response', (data) => {
-          messages.innerHTML += data.response;
-          messages.scrollTop = messages.scrollHeight;
-          loading.style.display = 'none';
-        });
-
-    </script>
-</body>
-</html>
+            });
+    
+            socket.on('loading', () => {
+                loading.style.display = 'block';
+            });
+    
+            socket.on('done_loading', () => {
+                 loading.style.display = 'none';
+            });
+    
+            socket.on('connect', function() {
+                console.log('connected');
+            });
+    
+            socket.on('clear_last_message', function(){
+                const botMessages = document.querySelectorAll('.bot-message');
+                if (botMessages.length > 0) {
+                  botMessages[botMessages.length - 1].remove();
+                }
+            });
+    
+            issueSubmitButton.addEventListener('click', () => {
+              const issueId = issueIdInput.value;
+              if (issueId) {
+                socket.emit('issue_summary', { issueId: issueId });
+              }
+            });
+    
+        </script>
+    </body>
+    </html>

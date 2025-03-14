@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Full Screen Chat</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            background-color: #f4f4f4; /* Light background */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #chat-container {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 15px;
+            background-color: #ffffff; /* White chat area */
+            border-bottom: 1px solid #ddd;
+        }
+
+        #input-container {
+            display: flex;
+            padding: 10px;
+            background-color: #f0f0f0; /* Light gray input area */
+        }
+
+        #message-input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+
+        #send-button {
+            padding: 10px 15px;
+            background-color: #007bff; /* Blue send button */
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 5px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .user-message {
+            background-color: #e0f7fa; /* Light blue user messages */
+            align-self: flex-end;
+        }
+
+        .bot-message {
+            background-color: #f0fff0; /* Light green bot messages */
+            align-self: flex-start;
+        }
+
+        #loading {
+            text-align: center;
+            padding: 10px;
+            display: none;
+        }
+
+        #loading img {
+            height: 50px; /* Adjust loading gif size */
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <div id="messages"></div>
+        <div id="chat-header">ASK SWF Jira</div>
+        
+        <div id="loading"><img src="{{ url_for('static', filename='loading.gif') }}" alt="Loading..."></div>
+        <div id="input-container">
+            <input type="text" id="message-input" />
+            <button id="send-button">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        const messages = document.getElementById('messages');
+        const messageInput = document.getElementById('message-input');
+        const sendButton = document.getElementById('send-button');
+        const loading = document.getElementById('loading');
+        const sessionId = "{{ session_id }}";
+
+        sendButton.addEventListener('click', () => {
+            const message = messageInput.value;
+            if (message) {
+                messages.innerHTML += `<div class="message user-message">${message}</div>`;
+                socket.emit('message', { message: message });
+                messageInput.value = '';
+                messages.scrollTop = messages.scrollHeight;
+            }
+        });
+
+        socket.on('stream', (data) => {
+            messages.innerHTML += data.data;
+            messages.scrollTop = messages.scrollHeight;
+        });
+
+        socket.on('loading', () => {
+            loading.style.display = 'block';
+        });
+
+        socket.on('done_loading', () => {
+             loading.style.display = 'none';
+        });
+
+        socket.on('connect', function() {
+            console.log('connected');
+        });
+
+    </script>
+</body>
+</html>

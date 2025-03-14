@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, jsonify, session, url_for
 from flask_socketio import SocketIO, emit, join_room
 import threading
 import time
-import uuid
+import uuid,re
 import requests
 
 app = Flask(__name__)
@@ -43,18 +43,30 @@ def get_llm_response(prompt):
 
     except Exception as e:
         yield f"Error: {e}"
-
+# Dictionary to store context variables for each session
+session_contexts = {}
 @app.route('/')
 def index():
     if 'session_id' not in session:
         session['session_id'] = str(uuid.uuid4())
     return render_template('index.html', session_id=session['session_id'])
-
 @socketio.on('connect')
 def handle_connect():
     session_id = session.get('session_id')
     if session_id:
         join_room(session_id)
+        # Initialize context variables for the session
+        session_contexts[session_id] = {"context_ID": None} #initialize context id to none.
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    session_id = session.get('session_id')
+    if session_id:
+        # Clean up context variables when the session disconnects
+        if session_id in session_contexts:
+            del session_contexts[session_id]
+
+    
 
 @socketio.on('message')
 def handle_message(data):
@@ -84,6 +96,11 @@ def handle_issue_summary(data):
     emit('stream', {'data': '<div class="bot-message">Please be patient, working on summary...</div>'}, room=session_id)
 
     with app.app_context():
+        # Access session context
+        context = session_contexts.get(session_id)
+        if context:
+            context["context_ID"] = issue_id # Update Context ID.
+
         data_result = query_data(f"summary for issue {issue_id}")
         prompt = f"summary for issue {issue_id}\nData: {data_result}\nResponse:"
         socketio.emit('clear_last_message', room=session_id)
@@ -93,7 +110,14 @@ def handle_issue_summary(data):
             response_chunks.append(chunk)
 
         formatted_response = "".join(response_chunks)
-        formatted_response = formatted_response.replace("**", "<b>").replace("**", "</b>").replace("\n", "<br>")
+
+        def format_bold(match):
+            if match.group(1):
+                return "<b>" + match.group(1) + "</b>"
+            return ""
+
+        formatted_response = re.sub(r'\*\*(.*?)\*\*', format_bold, formatted_response)
+        formatted_response = formatted_response.replace("\n", "<br>")
 
         socketio.emit('stream', {'data': formatted_response}, room=session_id)
         socketio.emit('done_loading', room=session_id)
